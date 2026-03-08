@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings</title>
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .nav a {
+      color: #38bdf8;
+      margin-right: 16px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .card {
+      background: #1e293b;
+      padding: 18px;
+      border-radius: 12px;
+      margin-top: 20px;
+      max-width: 500px;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 6px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 16px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #msg {
+      margin-top: 12px;
+      color: #22c55e;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <a href="/">Dashboard</a>
+    <a href="/alerts">Alerts</a>
+    <a href="/logs">Logs</a>
+    <a href="/settings">Settings</a>
+  </div>
+
+  <h2>Settings</h2>
+
+  <div class="card">
+    <label for="conf_thresh">Confidence Threshold</label>
+    <input type="number" id="conf_thresh" step="0.01" min="0.05" max="0.95" />
+
+    <label for="email_to">Email Recipients</label>
+    <input type="text" id="email_to" />
+
+    <label for="sms_to">SMS Recipients</label>
+    <input type="text" id="sms_to" />
+
+    <label><input type="checkbox" id="email_enabled" /> Enable Email Alerts</label>
+    <label><input type="checkbox" id="sms_enabled" /> Enable SMS Alerts</label>
+
+    <button onclick="saveSettings()">Save Settings</button>
+    <div id="msg"></div>
+  </div>
+
+  <script>
+    async function loadSettings() {
+      try {
+        const res = await fetch("/api/settings");
+        const data = await res.json();
+
+        document.getElementById("conf_thresh").value = data.conf_thresh ?? 0.08;
+        document.getElementById("email_to").value = data.email_to ?? "";
+        document.getElementById("sms_to").value = data.sms_to ?? "";
+        document.getElementById("email_enabled").checked = !!data.email_enabled;
+        document.getElementById("sms_enabled").checked = !!data.sms_enabled;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function saveSettings() {
+      const payload = {
+        conf_thresh: parseFloat(document.getElementById("conf_thresh").value || "0.08"),
+        email_to: document.getElementById("email_to").value.trim(),
+        sms_to: document.getElementById("sms_to").value.trim(),
+        email_enabled: document.getElementById("email_enabled").checked,
+        sms_enabled: document.getElementById("sms_enabled").checked
+      };
+
+      try {
+        const res = await fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        document.getElementById("msg").innerText = data.ok ? "Settings saved." : "Failed to save settings.";
+      } catch (err) {
+        document.getElementById("msg").innerText = "Error while saving settings.";
+        console.error(err);
+      }
+    }
+
+    loadSettings();
+  </script>
+</body>
+</html>

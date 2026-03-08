@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alerts</title>
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .nav a {
+      color: #38bdf8;
+      margin-right: 16px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .card {
+      background: #1e293b;
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 20px;
+      max-width: 700px;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <a href="/">Dashboard</a>
+    <a href="/alerts">Alerts</a>
+    <a href="/logs">Logs</a>
+    <a href="/settings">Settings</a>
+  </div>
+
+  <h2>Alerts</h2>
+
+  <div class="card">
+    <p><strong>Email alerts:</strong> Enabled through your Gmail settings</p>
+    <p><strong>SMS alerts:</strong> Enabled through your Twilio settings</p>
+    <p><strong>Trigger logic:</strong></p>
+    <ul>
+      <li>Fire only → send alert</li>
+      <li>Fire + human → send alert</li>
+      <li>Human only → no alert</li>
+    </ul>
+
+    <button onclick="testAlert()">Send Test Alert</button>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    async function testAlert() {
+      const result = document.getElementById("result");
+      result.innerText = "Sending...";
+
+      try {
+        const res = await fetch("/api/test_notification", { method: "POST" });
+        const data = await res.json();
+        result.innerText =
+          `Email: ${data.email}, SMS: ${data.sms}` +
+          (data.email_error ? ` | Email Error: ${data.email_error}` : "") +
+          (data.sms_error ? ` | SMS Error: ${data.sms_error}` : "");
+      } catch (err) {
+        result.innerText = "Failed to send test alert.";
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
