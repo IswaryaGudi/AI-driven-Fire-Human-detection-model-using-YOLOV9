@@ -1,4 +1,4 @@
-\# AI Fire and Human Detection System 🔥👤
+\# AI driven Fire and Human Detection model using YOLOV9 🔥👤
 
 
 
