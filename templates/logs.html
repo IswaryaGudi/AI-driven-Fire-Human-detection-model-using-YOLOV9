@@ -4,67 +4,98 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Logs</title>
-  <style>
-    body {
-      background: #0f172a;
-      color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
-    .nav a {
-      color: #38bdf8;
-      margin-right: 16px;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    .card {
-      background: #1e293b;
-      padding: 14px;
-      border-radius: 12px;
-      margin-top: 12px;
-    }
-    .muted {
-      color: #94a3b8;
-      font-size: 14px;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="nav">
-    <a href="/">Dashboard</a>
-    <a href="/alerts">Alerts</a>
-    <a href="/logs">Logs</a>
-    <a href="/settings">Settings</a>
-  </div>
+  <div class="app">
+    <aside class="sidebar">
+      <div>
+        <div class="brand">
+          <div class="brand-icon">🔥</div>
+          <div>
+            <h2>Fire & Human</h2>
+            <p>Detection System</p>
+          </div>
+        </div>
 
-  <h2>Logs</h2>
-  <div id="logsBox">Loading...</div>
+        <nav class="nav">
+          <a class="nav-item" href="/">Dashboard</a>
+          <a class="nav-item" href="/alerts">Alerts</a>
+          <a class="nav-item active" href="/logs">Logs</a>
+          <a class="nav-item" href="/settings">Settings</a>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <p>Powered by YOLOv9 + Flask</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="page-wrap">
+        <h1 class="page-title">Detection Logs</h1>
+        <p class="page-subtitle">Track fire detection events and system status in real time</p>
+
+        <div class="panel-card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Event</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="logsTableBody">
+                <tr>
+                  <td colspan="4">Loading logs...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
 
   <script>
     async function loadLogs() {
-      const box = document.getElementById("logsBox");
+      const tbody = document.getElementById("logsTableBody");
 
       try {
         const res = await fetch("/api/logs");
-        const data = await res.json();
+        const text = await res.text();
 
-        if (!data || data.length === 0) {
-          box.innerHTML = "<p>No logs found.</p>";
+        let data = [];
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("Invalid JSON from /api/logs:", text);
+          tbody.innerHTML = '<tr><td colspan="4">API did not return valid JSON</td></tr>';
           return;
         }
 
-        box.innerHTML = data.map(item => `
-          <div class="card">
-            <div><strong>${item.event || "Event"}</strong></div>
-            <div class="muted">Location: ${item.location || "-"}</div>
-            <div class="muted">Status: ${item.status || "-"}</div>
-            <div class="muted">Time: ${item.created_at || "-"}</div>
-          </div>
-        `).join("");
+        tbody.innerHTML = "";
+
+        if (!Array.isArray(data) || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4">No logs found.</td></tr>';
+          return;
+        }
+
+        data.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${item.created_at || "-"}</td>
+            <td>${item.event || "-"}</td>
+            <td>${item.location || "-"}</td>
+            <td>${item.status || "-"}</td>
+          `;
+          tbody.appendChild(tr);
+        });
       } catch (err) {
-        box.innerHTML = "<p>Failed to load logs.</p>";
-        console.error(err);
+        console.error("Logs fetch error:", err);
+        tbody.innerHTML = '<tr><td colspan="4">Failed to load logs.</td></tr>';
       }
     }
 
