@@ -3,123 +3,101 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Settings</title>
-  <style>
-    body {
-      background: #0f172a;
-      color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
-    .nav a {
-      color: #38bdf8;
-      margin-right: 16px;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    .card {
-      background: #1e293b;
-      padding: 18px;
-      border-radius: 12px;
-      margin-top: 20px;
-      max-width: 500px;
-    }
-    label {
-      display: block;
-      margin-top: 12px;
-      margin-bottom: 6px;
-    }
-    input[type="text"], input[type="number"] {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      outline: none;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 16px;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    #msg {
-      margin-top: 12px;
-      color: #22c55e;
-    }
-  </style>
+  <title>Settings | AI Fire & Human Detection</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="nav">
-    <a href="/">Dashboard</a>
-    <a href="/alerts">Alerts</a>
-    <a href="/logs">Logs</a>
-    <a href="/settings">Settings</a>
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1>System Settings</h1>
+        <p>Runtime configuration, detection parameters, and service integration overview</p>
+      </div>
+    </header>
+
+    <section class="dashboard-grid">
+      <div class="card">
+        <div class="card-header">
+          <h3>Detection Configuration</h3>
+        </div>
+
+        <div style="padding:20px; color:#b9c2d0; line-height:1.8;">
+          <p><strong style="color:#fff;">Model:</strong> YOLOv9 object detection model</p>
+          <p><strong style="color:#fff;">Configured Classes:</strong> fire, person</p>
+          <p><strong style="color:#fff;">Inference Source:</strong> Live camera stream</p>
+          <p><strong style="color:#fff;">Processing Mode:</strong> Real-time frame analysis</p>
+          <p><strong style="color:#fff;">Bounding Box Output:</strong> Enabled</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Threshold Parameters</h3>
+        </div>
+
+        <div style="padding:20px; color:#b9c2d0; line-height:1.8;">
+          <p><strong style="color:#fff;">Fire Confidence Threshold:</strong> 0.45</p>
+          <p><strong style="color:#fff;">Human Confidence Threshold:</strong> 0.50</p>
+          <p><strong style="color:#fff;">Non-Max Suppression:</strong> Enabled</p>
+          <p><strong style="color:#fff;">Frame Update Interval:</strong> Continuous stream processing</p>
+          <p><strong style="color:#fff;">Alert Trigger Rule:</strong> Event-driven based on detection counts</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Notification Services</h3>
+        </div>
+
+        <div style="padding:20px; color:#b9c2d0; line-height:1.8;">
+          <p><strong style="color:#fff;">Email Service:</strong> SMTP-based notification channel</p>
+          <p><strong style="color:#fff;">SMS Service:</strong> Twilio integration</p>
+          <p><strong style="color:#fff;">Notification Scope:</strong> Critical fire events</p>
+          <p><strong style="color:#fff;">Delivery Mode:</strong> Automatic on rule match</p>
+          <p><strong style="color:#fff;">Failure Handling:</strong> Event status stored in logs</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Storage and Logging</h3>
+        </div>
+
+        <div style="padding:20px; color:#b9c2d0; line-height:1.8;">
+          <p><strong style="color:#fff;">Log Storage:</strong> Timestamped event records</p>
+          <p><strong style="color:#fff;">Snapshot Capture:</strong> Manual capture supported from dashboard</p>
+          <p><strong style="color:#fff;">Database Usage:</strong> Event persistence and monitoring history</p>
+          <p><strong style="color:#fff;">Status Tracking:</strong> Alert sent / logged / monitoring state</p>
+          <p><strong style="color:#fff;">Audit Utility:</strong> Supports review and incident analysis</p>
+        </div>
+      </div>
+
+      <div class="card full-width">
+        <div class="card-header">
+          <h3>System Architecture Summary</h3>
+        </div>
+
+        <div style="padding:20px; color:#b9c2d0; line-height:1.8;">
+          <p>
+            The system is designed as a real-time computer vision monitoring pipeline. Video frames are captured
+            through OpenCV, processed by the YOLOv9 detection model, and passed into a response layer that updates
+            the dashboard, generates event logs, and triggers notification services when configured conditions are met.
+          </p>
+
+          <br>
+
+          <p><strong style="color:#fff;">Frontend:</strong> HTML, CSS, JavaScript dashboard interface</p>
+          <p><strong style="color:#fff;">Backend:</strong> Flask application server</p>
+          <p><strong style="color:#fff;">Vision Layer:</strong> YOLOv9 inference engine</p>
+          <p><strong style="color:#fff;">Communication Layer:</strong> Email and SMS alert services</p>
+          <p><strong style="color:#fff;">Monitoring Goal:</strong> Early fire detection with human presence awareness</p>
+        </div>
+      </div>
+    </section>
+
+    <div style="margin-top:20px;">
+      <a href="/" class="action-btn">← Back to Dashboard</a>
+    </div>
   </div>
-
-  <h2>Settings</h2>
-
-  <div class="card">
-    <label for="conf_thresh">Confidence Threshold</label>
-    <input type="number" id="conf_thresh" step="0.01" min="0.05" max="0.95" />
-
-    <label for="email_to">Email Recipients</label>
-    <input type="text" id="email_to" />
-
-    <label for="sms_to">SMS Recipients</label>
-    <input type="text" id="sms_to" />
-
-    <label><input type="checkbox" id="email_enabled" /> Enable Email Alerts</label>
-    <label><input type="checkbox" id="sms_enabled" /> Enable SMS Alerts</label>
-
-    <button onclick="saveSettings()">Save Settings</button>
-    <div id="msg"></div>
-  </div>
-
-  <script>
-    async function loadSettings() {
-      try {
-        const res = await fetch("/api/settings");
-        const data = await res.json();
-
-        document.getElementById("conf_thresh").value = data.conf_thresh ?? 0.08;
-        document.getElementById("email_to").value = data.email_to ?? "";
-        document.getElementById("sms_to").value = data.sms_to ?? "";
-        document.getElementById("email_enabled").checked = !!data.email_enabled;
-        document.getElementById("sms_enabled").checked = !!data.sms_enabled;
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    async function saveSettings() {
-      const payload = {
-        conf_thresh: parseFloat(document.getElementById("conf_thresh").value || "0.08"),
-        email_to: document.getElementById("email_to").value.trim(),
-        sms_to: document.getElementById("sms_to").value.trim(),
-        email_enabled: document.getElementById("email_enabled").checked,
-        sms_enabled: document.getElementById("sms_enabled").checked
-      };
-
-      try {
-        const res = await fetch("/api/settings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-        document.getElementById("msg").innerText = data.ok ? "Settings saved." : "Failed to save settings.";
-      } catch (err) {
-        document.getElementById("msg").innerText = "Error while saving settings.";
-        console.error(err);
-      }
-    }
-
-    loadSettings();
-  </script>
 </body>
 </html>
