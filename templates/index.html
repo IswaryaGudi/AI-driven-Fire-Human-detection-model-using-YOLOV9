@@ -1,207 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Fire & Human Detection</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>AI Fire & Human Detection</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-icon">🔥</div>
-        <div>
-          <h2>Fire & Human</h2>
-          <p>Detection System</p>
-        </div>
-      </div>
 
-      <nav class="nav">
-        <a class="nav-item active" href="/">Dashboard</a>
-        <a class="nav-item" href="/alerts">Alerts</a>
-        <a class="nav-item" href="/logs">Logs</a>
-        <a class="nav-item" href="/settings">Settings</a>
-      </nav>
+<div class="app">
 
-      <div class="sidebar-footer">
-        <p>Powered by YOLOv9 + Flask</p>
-      </div>
-    </aside>
+<aside class="sidebar">
 
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <h1>AI Fire & Human Detection</h1>
-          <p>Real-Time Monitoring Dashboard</p>
-        </div>
-        <div class="status-pill">
-          <span class="dot"></span>
-          <span id="system-status">Monitoring</span>
-        </div>
-      </header>
+<div>
 
-      <section class="dashboard-grid">
-        <div class="card live-feed-card">
-          <div class="card-header">
-            <h3>Live Camera Feed</h3>
-            <span class="live-badge">LIVE</span>
-          </div>
-          <div class="video-wrap">
-            <img id="liveFeed" src="/video" alt="Live camera feed" />
-          </div>
-        </div>
+<div class="brand">
+<div class="brand-icon">🔥</div>
 
-        <div class="right-panel">
-          <div class="card summary-card fire-card">
-            <h3>Fires Detected</h3>
-            <div class="big-number" id="fire-count">0</div>
-          </div>
+<div>
+<h2>Fire & Human</h2>
+<p>Detection System</p>
+</div>
 
-          <div class="card summary-card human-card">
-            <h3>Humans Detected</h3>
-            <div class="big-number" id="human-count">0</div>
-          </div>
+</div>
 
-          <div class="card alerts-card">
-            <div class="card-header">
-              <h3>Recent Alerts</h3>
-            </div>
-            <div id="alertsList" class="alerts-list">
-              <div class="alert-item">No alerts yet</div>
-            </div>
-          </div>
-        </div>
+<nav class="nav">
 
-        <div class="card logs-card full-width">
-          <div class="card-header">
-            <h3>Live Logs</h3>
-            <button class="action-btn" id="snapshotBtn" type="button">Take Snapshot</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Event</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="logsTableBody">
-                <tr>
-                  <td colspan="3">Loading logs...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
+<a href="/" class="nav-item active">Dashboard</a>
+<a href="/logs" class="nav-item">Logs</a>
+<a href="/alerts" class="nav-item">Alerts</a>
+<a href="/settings" class="nav-item">Settings</a>
 
-  <script>
-    function setActiveNav() {
-      const currentPath = window.location.pathname;
-      const navItems = document.querySelectorAll('.nav-item');
+</nav>
 
-      navItems.forEach(item => {
-        item.classList.remove('active');
-        const href = item.getAttribute('href');
-        if (href === currentPath) {
-          item.classList.add('active');
-        }
-      });
-    }
+</div>
+ 
 
-    async function loadStatus() {
-      try {
-        const res = await fetch('/api/status');
-        if (!res.ok) throw new Error('Failed to fetch status');
+</aside>
 
-        const data = await res.json();
-        document.getElementById('fire-count').textContent = data.fires ?? 0;
-        document.getElementById('human-count').textContent = data.humans ?? 0;
-        document.getElementById('system-status').textContent = data.status ?? 'Monitoring';
-      } catch (e) {
-        console.error('Status load error:', e);
-        document.getElementById('system-status').textContent = 'Connection Error';
-      }
-    }
+<main class="main">
 
-    async function loadLogs() {
-      try {
-        const res = await fetch('/api/logs');
-        if (!res.ok) throw new Error('Failed to fetch logs');
+<header class="topbar">
 
-        const data = await res.json();
-        const tbody = document.getElementById('logsTableBody');
-        const alertsList = document.getElementById('alertsList');
+<div>
+<h1>AI Fire & Human Detection Model using YOLOv9</h1>
+<p>Real-Time Monitoring Dashboard</p>
+</div>
 
-        tbody.innerHTML = '';
-        alertsList.innerHTML = '';
+<div class="status-pill">
+<span class="dot"></span>
+<span id="system-status">Monitoring</span>
+</div>
 
-        if (!data || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3">No logs available</td></tr>';
-          alertsList.innerHTML = '<div class="alert-item">No alerts yet</div>';
-          return;
-        }
+</header>
 
-        data.slice(0, 10).forEach(log => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${log.created_at || '-'}</td>
-            <td>${log.event || '-'}</td>
-            <td>${log.status || '-'}</td>
-          `;
-          tbody.appendChild(tr);
-        });
+<section class="dashboard-grid">
 
-        data.slice(0, 5).forEach(log => {
-          const div = document.createElement('div');
-          div.className = 'alert-item';
-          div.innerHTML = `
-            <div class="alert-title">${log.event || 'Event'}</div>
-            <div class="alert-meta">${log.created_at || '-'} | ${log.status || '-'}</div>
-          `;
-          alertsList.appendChild(div);
-        });
-      } catch (e) {
-        console.error('Logs load error:', e);
-        document.getElementById('logsTableBody').innerHTML =
-          '<tr><td colspan="3">Failed to load logs</td></tr>';
-        document.getElementById('alertsList').innerHTML =
-          '<div class="alert-item">Failed to load alerts</div>';
-      }
-    }
+<div class="card live-feed-card">
 
-    async function takeSnapshot() {
-      try {
-        const res = await fetch('/api/snapshot', { method: 'POST' });
-        if (!res.ok) throw new Error('Snapshot request failed');
+<div class="card-header">
+<h3>Live Camera Feed</h3>
+<span class="live-badge">LIVE</span>
+</div>
 
-        const data = await res.json();
-        if (data.ok) {
-          alert('Snapshot saved: ' + data.path);
-        } else {
-          alert('Snapshot failed: ' + (data.error || 'Unknown error'));
-        }
-      } catch (e) {
-        console.error('Snapshot error:', e);
-        alert('Snapshot error');
-      }
-    }
+<div class="video-controls">
 
-    const snapshotBtn = document.getElementById('snapshotBtn');
-    if (snapshotBtn) {
-      snapshotBtn.addEventListener('click', takeSnapshot);
-    }
+<a href="/model" class="control-btn">
+<div class="btn-title">YOLOv9</div>
+<div class="btn-sub">AI Model</div>
+</a>
 
-    setActiveNav();
-    loadStatus();
-    loadLogs();
+<a href="/realtime" class="control-btn">
+<div class="btn-title">Real-Time</div>
+<div class="btn-sub">Detection</div>
+</a>
 
-    setInterval(loadStatus, 1500);
-    setInterval(loadLogs, 3000);
-  </script>
+<button class="snapshot-btn" id="snapshotBtn">
+📸 Snapshot
+</button>
+
+</div>
+
+<div class="video-wrap">
+<img id="liveFeed" src="/video" alt="Live camera feed">
+</div>
+
+</div>
+
+<div class="right-panel">
+
+<div class="card summary-card fire-card">
+<h3>Fires Detected</h3>
+<div class="big-number" id="fire-count">0</div>
+</div>
+
+<div class="card summary-card human-card">
+<h3>Humans Detected</h3>
+<div class="big-number" id="human-count">0</div>
+</div>
+
+</div>
+
+<div class="card logs-card full-width">
+
+<div class="card-header">
+<h3>Live Logs</h3>
+</div>
+
+<div class="table-wrap">
+
+<table>
+
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody id="logsTableBody">
+
+<tr>
+<td colspan="3">Loading logs...</td>
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</section>
+
+</main>
+
+</div>
+
+<script>
+
+function setActiveNav(){
+
+const currentPath = window.location.pathname;
+const navItems = document.querySelectorAll(".nav-item");
+
+navItems.forEach(item => {
+item.classList.remove("active");
+
+if(item.getAttribute("href") === currentPath){
+item.classList.add("active");
+}
+
+});
+
+}
+
+async function loadStatus(){
+
+try{
+
+const res = await fetch("/api/status");
+const data = await res.json();
+
+document.getElementById("fire-count").textContent = data.fires ?? 0;
+document.getElementById("human-count").textContent = data.humans ?? 0;
+document.getElementById("system-status").textContent = data.status ?? "Monitoring";
+
+}catch(e){
+
+document.getElementById("system-status").textContent = "Connection Error";
+
+}
+
+}
+
+async function loadLogs(){
+
+try{
+
+const res = await fetch("/api/logs");
+const data = await res.json();
+
+const tbody = document.getElementById("logsTableBody");
+tbody.innerHTML="";
+
+if(!Array.isArray(data) || data.length===0){
+
+tbody.innerHTML='<tr><td colspan="3">No logs available</td></tr>';
+return;
+
+}
+
+data.slice(0,10).forEach(log=>{
+
+const tr=document.createElement("tr");
+
+tr.innerHTML=`
+<td>${log.created_at || "-"}</td>
+<td>${log.event || "-"}</td>
+<td>${log.status || "-"}</td>
+`;
+
+tbody.appendChild(tr);
+
+});
+
+}catch(e){
+
+document.getElementById("logsTableBody").innerHTML =
+'<tr><td colspan="3">Failed to load logs</td></tr>';
+
+}
+
+}
+
+async function takeSnapshot(){
+
+try{
+
+const res = await fetch("/api/snapshot",{method:"POST"});
+const data = await res.json();
+
+if(data.ok){
+
+alert("Snapshot saved: "+data.path);
+
+}else{
+
+alert("Snapshot failed");
+
+}
+
+}catch(e){
+
+alert("Snapshot error");
+
+}
+
+}
+
+document.getElementById("snapshotBtn").addEventListener("click",takeSnapshot);
+
+setActiveNav();
+loadStatus();
+loadLogs();
+
+setInterval(loadStatus,1500);
+setInterval(loadLogs,3000);
+
+</script>
+
 </body>
 </html>
