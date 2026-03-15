@@ -26,6 +26,7 @@ print("Using config:", config.__file__)
 print("WEIGHTS_PATH:", config.WEIGHTS_PATH)
 
 app = Flask(__name__)
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 # -------------------------
 # Init
@@ -35,8 +36,8 @@ db.init_db()
 detector = YOLOv9Detector(
     fire_weights=config.WEIGHTS_PATH,
     person_weights="yolov9/yolov9-c.pt",
-    fire_conf_thres=0.03,
-    person_conf_thres=0.25,
+    fire_conf_thres=0.30,
+    person_conf_thres=0.40,
     iou_thres=config.IOU_THRESHOLD,
     img_size=config.IMG_SIZE,
 )
@@ -54,26 +55,11 @@ last_snapshot_path = None
 # -------------------------
 # Helpers
 # -------------------------
-def _to_int(x):
-    try:
-        return int(x)
-    except Exception:
-        return 0
-
-
 def _safe_float(x, default=0.4):
     try:
         return float(x)
     except Exception:
         return default
-
-
-def _get_settings():
-    try:
-        s = db.get_settings()
-        return s if s else {}
-    except Exception:
-        return {}
 
 
 def normalize_detections(detections):
@@ -107,6 +93,11 @@ def draw_boxes(frame, detections):
         is_person = lower == "person"
         is_fire = "fire" in lower
 
+        if is_fire and conf < 0.30:
+            continue
+        if is_person and conf < 0.40:
+            continue
+
         if is_person:
             person_count += 1
             color = (0, 255, 0)
@@ -114,7 +105,7 @@ def draw_boxes(frame, detections):
             fire_count += 1
             color = (0, 0, 255)
         else:
-            color = (255, 255, 0)
+            continue
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
         cv2.putText(
@@ -131,20 +122,7 @@ def draw_boxes(frame, detections):
     return frame, fire_count, person_count
 
 
-def set_runtime_confidence():
-    if hasattr(detector, "set_conf"):
-        try:
-            detector.set_conf(0.08)
-        except Exception:
-            pass
-
-
 def maybe_alert(alert_type: str, fire_count: int, person_count: int):
-    """
-    alert_type:
-      - "fire_only"
-      - "fire_human"
-    """
     now = time.time()
     cooldown = getattr(config, "ALERT_COOLDOWN", 20)
 
@@ -158,6 +136,8 @@ def maybe_alert(alert_type: str, fire_count: int, person_count: int):
             f"Fire Count: {fire_count} | Human Count: {person_count}"
         )
         log_event = "Fire Detected"
+        target_groups = ["admin_team"]
+
     elif alert_type == "fire_human":
         subject = "ALERT: FIRE + HUMAN DETECTED"
         body = (
@@ -165,51 +145,50 @@ def maybe_alert(alert_type: str, fire_count: int, person_count: int):
             f"Fire Count: {fire_count} | Human Count: {person_count}"
         )
         log_event = "Fire + Human Detected"
+        target_groups = ["admin_team", "safety_team"]
+
     else:
         return
 
+    all_emails = []
+    all_phones = []
+
+    for group in target_groups:
+        all_emails.extend(config.get_group_emails(group))
+        all_phones.extend(config.get_group_phones(group))
+
+    # remove duplicates
+    all_emails = list(dict.fromkeys(all_emails))
+    all_phones = list(dict.fromkeys(all_phones))
+
     ok_any = False
-    errors = []
 
     try:
-        if config.EMAIL_ENABLED and config.EMAIL_RECIPIENTS:
-            send_email(subject, body, config.EMAIL_RECIPIENTS)
+        if config.EMAIL_ENABLED and all_emails:
+            send_email(subject, body, all_emails)
             ok_any = True
     except Exception as e:
-        errors.append(f"Email: {e}")
+        print("Email error:", e)
 
     try:
-        if config.SMS_ENABLED and config.SMS_RECIPIENTS:
-            send_sms(body, config.SMS_RECIPIENTS)
+        if config.SMS_ENABLED and all_phones:
+            send_sms(body, all_phones)
             ok_any = True
     except Exception as e:
-        errors.append(f"SMS: {e}")
+        print("SMS error:", e)
 
-    try:
-        if ok_any:
-            db.add_log(log_event, location="Camera", status="Alert Sent")
-        else:
-            status = "Alert Failed"
-            if errors:
-                status += " | " + " ; ".join(errors[:2])
-            db.add_log(log_event, location="Camera", status=status)
-    except Exception as e:
-        print("DB log error:", e)
-
-    if errors:
-        print("Alert errors:", errors)
+    if ok_any:
+        db.add_log(log_event, location="Camera", status="Alert Sent")
+    else:
+        db.add_log(log_event, location="Camera", status="Alert Failed")
 
     last_alert_ts[alert_type] = now
 
 
 def process_one_frame(frame):
-    if hasattr(detector, "set_conf"):
-        try:
-            detector.set_conf(config.CONF_THRESHOLD)
-        except Exception:
-            pass
-
     raw = detector.detect(frame)
+    print("RAW DETECTIONS:", raw)
+
     detections = normalize_detections(raw)
     frame, fire_count, person_count = draw_boxes(frame, detections)
 
@@ -226,6 +205,10 @@ def process_one_frame(frame):
 
 
 def read_camera_frame():
+    global cap
+    if cap is None or not cap.isOpened():
+        return None
+
     ok, frame = cap.read()
     if not ok or frame is None:
         return None
@@ -267,6 +250,16 @@ def settings_page():
     return render_template("settings.html")
 
 
+@app.route("/model")
+def model():
+    return render_template("model.html")
+
+
+@app.route("/realtime")
+def realtime():
+    return render_template("realtime.html")
+
+
 # -------------------------
 # Video endpoints
 # -------------------------
@@ -274,7 +267,7 @@ def gen_frames():
     while True:
         frame = read_camera_frame()
         if frame is None:
-            time.sleep(0.05)
+            time.sleep(0.1)
             continue
 
         frame = process_one_frame(frame)
@@ -329,13 +322,29 @@ def frame_image():
 # -------------------------
 @app.route("/api/status")
 def api_status():
+    global cap
+
     with state_lock:
-        c = dict(latest_counts)
+        fire_count = latest_counts["fire"]
+        person_count = latest_counts["person"]
+
+    camera_ok = cap is not None and cap.isOpened()
+
+    if not camera_ok:
+        status = "Camera Off"
+    elif fire_count > 0 and person_count > 0:
+        status = "Fire + Human Detected"
+    elif fire_count > 0:
+        status = "Fire Detected"
+    elif person_count > 0:
+        status = "Human Detected"
+    else:
+        status = "Monitoring"
 
     return jsonify({
-        "fires": c["fire"],
-        "humans": c["person"],
-        "status": "Monitoring",
+        "fires": fire_count,
+        "humans": person_count,
+        "status": status
     })
 
 
@@ -359,7 +368,7 @@ def api_settings():
 
     data = request.json or {}
 
-    conf = _safe_float(data.get("conf_thresh", 0.08), 0.08)
+    conf = _safe_float(data.get("conf_thresh", 0.18), 0.18)
     email_enabled = 1 if bool(data.get("email_enabled", False)) else 0
     sms_enabled = 1 if bool(data.get("sms_enabled", False)) else 0
     email_to = str(data.get("email_to", "")).strip()
@@ -382,9 +391,28 @@ def test_notification():
     email_error = ""
     sms_error = ""
 
+    test_emails = []
+    test_phones = []
+
+    for group in ["admin_team", "safety_team"]:
+        test_emails.extend(config.get_group_emails(group))
+        test_phones.extend(config.get_group_phones(group))
+
+    test_emails = list(dict.fromkeys(test_emails))
+    test_phones = list(dict.fromkeys(test_phones))
+
     try:
-        if config.EMAIL_ENABLED and config.EMAIL_SENDER and config.EMAIL_PASSWORD and config.EMAIL_RECIPIENTS:
-            send_email("Test Alert", "Test email from fire detection project", config.EMAIL_RECIPIENTS)
+        if (
+            config.EMAIL_ENABLED
+            and config.EMAIL_SENDER
+            and config.EMAIL_PASSWORD
+            and test_emails
+        ):
+            send_email(
+                "Test Alert",
+                "Test email from fire detection project",
+                test_emails,
+            )
             email_ok = True
         else:
             email_error = "Email config missing"
@@ -392,8 +420,17 @@ def test_notification():
         email_error = str(e)
 
     try:
-        if config.SMS_ENABLED and config.TWILIO_ACCOUNT_SID and config.TWILIO_AUTH_TOKEN and config.TWILIO_PHONE and config.SMS_RECIPIENTS:
-            send_sms("Test SMS from fire detection project", config.SMS_RECIPIENTS)
+        if (
+            config.SMS_ENABLED
+            and config.TWILIO_ACCOUNT_SID
+            and config.TWILIO_AUTH_TOKEN
+            and config.TWILIO_PHONE
+            and test_phones
+        ):
+            send_sms(
+                "Test SMS from fire detection project",
+                test_phones,
+            )
             sms_ok = True
         else:
             sms_error = "SMS config missing"
